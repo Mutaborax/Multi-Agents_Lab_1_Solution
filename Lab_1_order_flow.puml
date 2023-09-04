@@ -1,0 +1,177 @@
+@startuml ManufacturingProcess
+
+header //Detailed Manufacturing Process
+footer Page %page% of %lastpage%
+title "Automated Part Production Flow"
+
+participant "Part" as part
+participant "Sensor" as sensor
+participant "Conveyor Belt" as conveyor_belt
+participant "Robotic Arm" as robotic_arm
+participant "Assembly Robot" as assembly_robotic_arm
+participant "Operator" as operator
+
+group #LightBlue Conveyor Movement
+autonumber 1.1
+    part -> conveyor_belt ++: Start Conveyor
+    part ++
+    alt #Gold Conveyor Doesn't Start
+        part -> operator: Alert: Conveyor Issue
+        note right: Maintenance addresses the issue
+        operator ++
+        operator --> part: Issue Resolved
+        operator --
+    part --
+    end  
+end
+
+group #LightBlue Sensor Activation
+autonumber 2.1
+    sensor -> part ++: Part Detected
+    sensor ++
+    sensor --
+    part -> conveyor_belt: Stop
+    
+    conveyor_belt --
+    alt #Gold #LightBlue Sensor Doesn't Detect
+        part -[#red]> operator: Alert: Sensor Issue
+        note right: Recalibration or replacement
+        operator ++
+        operator --> part: Issue Resolved
+        operator --
+        part -- 
+        sensor --
+    end    
+end
+
+group #LightBlue Robotic Arm Movement\nfor Initial Handling
+autonumber 3.1
+    
+    part -> robotic_arm ++: Command to Pick
+    part ++
+    robotic_arm --> part: Command Received
+    part -> robotic_arm: Command to Place\nin Assembly Station
+    robotic_arm --> part: Part Placed
+    robotic_arm --
+    alt #Gold Robotic Arm Malfunction
+        part -[#red]> operator: Alert: Robotic Arm Issue
+        note right: Issue addressed or rerouting done
+        operator ++
+        operator --> part: Issue Resolved
+        operator --
+        part --
+    end   
+end
+
+group #LightBlue Part Assembly
+autonumber 4.1
+    part -> robotic_arm ++: Start Assembly
+    part ++
+    robotic_arm -> assembly_robotic_arm: Assembly\nInitiated 
+    robotic_arm --
+    assembly_robotic_arm ++
+    assembly_robotic_arm --> part: Assembly\nCompleted
+    assembly_robotic_arm --
+    robotic_arm --
+        alt #Gold Assembly Malfunction
+            part -[#red]> operator: Alert: Assembly Robot\n Failure Issue
+            note right: Operator intervenes or reroutes
+            operator ++
+            operator --> part: Issue Resolved
+            operator --
+            robotic_arm --
+            part --
+        end
+end
+
+
+group #LightYellow  Quality Inspection
+
+group  #LightBlue Robotic Arm Movement for\nQuality Inspection
+autonumber 5.1
+    
+    part -> robotic_arm ++: Command to Pick\nfrom Assembly Station
+    part ++
+    robotic_arm -> assembly_robotic_arm: Pick from\nAssembly point
+    robotic_arm --
+        assembly_robotic_arm ++
+            assembly_robotic_arm --> part: Part Picked
+        assembly_robotic_arm --
+            part -> robotic_arm: Move to Sensor\nfor Inspection
+            part --
+        robotic_arm ++
+        
+    robotic_arm --[#blue]> sensor: Part Placed\nfor Inspection
+        robotic_arm --
+        sensor ++
+end
+autonumber 5.1.1
+    part -[#blue]> sensor: Perform Quality Check
+    part ++
+    sensor --[#blue]> part: Quality Assessment Result
+    sensor --
+    alt #LightGreen Quality Satisfactory
+        part -[#green]> robotic_arm: Move to\nCollection Point
+        robotic_arm ++
+        robotic_arm-[#green]> conveyor_belt: Delivery\nPoint
+        robotic_arm --
+        conveyor_belt ++
+        part -[#green]> conveyor_belt: Final Delivery\nLocation
+        note right : Succesfully Aseembled Part
+        conveyor_belt --
+        part  --
+        group #LightPink Exception Handling 
+            else Assembly Error
+                part -> operator: Alert: Missing Parts
+                part ++
+                operator ++  
+                alt #Gold Source from Nearby Cache
+                    note right: System tries sourcing missing part from nearby storage.
+                else #red Place in Temporary Buffer
+                    note right: Part is buffered, allowing system to handle other parts.
+                else #red Return to Conveyor for Later
+                    note right: Missing part can't be sourced quickly. Return to conveyor for reprocessing.
+                end
+                part -[#red]> robotic_arm: Return Part\n to origin
+                robotic_arm ++
+                robotic_arm -> conveyor_belt: Return to point of\ncollection for parts
+                robotic_arm --
+                conveyor_belt ++
+                conveyor_belt --> part: Return for\nadditional parts
+                conveyor_belt -- 
+
+            else Improper Assembly
+                part -> operator: Alert: Improper Assembly
+                alt #Gold Rework Assembly
+                    note right: Assembly robot attempts immediate rework.
+                else #red Flag for Manual Inspection
+                    note right: Part is flagged for manual inspection or repair.
+                else #red Return to Conveyor for Reassembly
+                end
+                part -[#red]> robotic_arm: Return Part\nto Assembly
+                assembly_robotic_arm ++
+                robotic_arm ++
+                robotic_arm -> assembly_robotic_arm: Return\nto Assembly
+                assembly_robotic_arm --
+                robotic_arm --
+
+            else Other Quality Issues
+                part -[#red]> operator: Alert: Other Issues
+                operator --
+                alt #Gold Flag for Detailed Inspection
+                    note right: Part is flagged for detailed inspection post conveyor cycle.
+                else #red Mark and Isolate for Analysis
+                    note right: Part is marked and set aside for future analysis.
+                else #red Reroute for Reprocessing
+                    note right: Part is rerouted back to conveyor start for reprocessing.
+                end
+                part -> conveyor_belt: Return Part
+                part --
+        end
+                
+    end
+
+end
+
+
+@enduml
